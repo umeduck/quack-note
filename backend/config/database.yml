@@ -1,0 +1,21 @@
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
+  username: <%= ENV.fetch("DATABASE_USERNAME") { "root" } %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD") { "password" } %>
+
+development:
+  <<: *default
+  database: <%= ENV.fetch("DATABASE_NAME") { "quacknote_development" } %>
+
+test:
+  <<: *default
+  database: quacknote_test
+
+production:
+  <<: *default
+  database: quacknote_production
+  username: quacknote
+  password: <%= ENV["DATABASE_PASSWORD"] %>

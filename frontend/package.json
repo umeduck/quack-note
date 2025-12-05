@@ -1,0 +1,22 @@
+{
+  "name": "quacknote-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vuetify": "^3.5.10",
+    "@mdi/font": "^7.4.47",
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.1.6",
+    "vite-plugin-vuetify": "^2.0.1"
+  }
+}
