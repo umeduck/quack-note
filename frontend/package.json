@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
     "vuetify": "^3.5.10",
+    "pinia": "^2.1.7",
     "@mdi/font": "^7.4.47",
     "axios": "^1.6.7"
   },
