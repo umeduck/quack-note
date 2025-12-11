@@ -1,21 +1,16 @@
 #!/bin/bash
 set -e
 
-echo "Waiting for MySQL to be ready..."
+echo "Starting QuackNote backend..."
 
-# MySQL の起動を待つ
-until mysqladmin ping -h "$DATABASE_HOST" -u"$DATABASE_USERNAME" -p"$DATABASE_PASSWORD" --silent; do
-  echo "MySQL is unavailable - sleeping"
-  sleep 2
-done
+# Bundle install (volume mount後に実行)
+echo "Installing gems..."
+bundle install
 
-echo "MySQL is up - executing command"
-
-# データベースが存在しない場合は作成
-bundle exec rails db:create || true
-
-# マイグレーション実行
-bundle exec rails db:migrate
+# bin/rails に実行権限を付与
+if [ -f /app/bin/rails ]; then
+  chmod +x /app/bin/rails
+fi
 
 # Rails サーバー起動
 echo "Starting Rails server..."

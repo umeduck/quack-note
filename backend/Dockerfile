@@ -9,8 +9,6 @@ ENV RAILS_ENV development
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
     build-essential \
-    default-libmysqlclient-dev \
-    default-mysql-client \
     git \
     nodejs \
     npm \
