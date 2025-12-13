@@ -4,12 +4,13 @@ require 'aws-sdk-cognitoidentityprovider'
 # AWS SDK v3 を使用して SignUp, ConfirmSignUp, ResendConfirmationCode を実行
 class CognitoService
   # Cognito クライアントの初期化
-  def initialize
+  def initialize(user_repository: nil)
     @client = Aws::CognitoIdentityProvider::Client.new(
       region: ENV['AWS_REGION'] || 'ap-northeast-1'
     )
     @user_pool_id = ENV['COGNITO_USER_POOL_ID']
     @client_id = ENV['COGNITO_CLIENT_ID']
+    @user_repository = user_repository || UserRepository.new
   end
 
   # ユーザー登録
@@ -20,6 +21,7 @@ class CognitoService
     validate_email!(email)
     validate_password!(password)
 
+    # Cognito にユーザーを登録
     response = @client.sign_up({
       client_id: @client_id,
       username: email,
@@ -32,9 +34,37 @@ class CognitoService
       ]
     })
 
+    user_sub = response.user_sub
+
+    Rails.logger.info "response: #{response.inspect}"
+    Rails.logger.info "User signed up in Cognito: user_sub=#{user_sub}, email=#{email}"
+
+    # DynamoDB にユーザー情報を保存
+    begin
+      @user_repository.create(
+        user_id: user_sub,
+        workspace_id: nil,
+        email: email,
+        name: 'test',
+        role: 'master',
+        status: 'pending',
+        created_at: Time.now.zone,
+        updated_at: Time.now.zone
+      )
+    rescue DuplicateUserError => e
+      # ユーザーが既に存在する場合（通常は発生しないはず）
+      Rails.logger.warn "User already exists in DynamoDB but not in Cognito: #{user_sub}"
+    rescue StandardError => e
+      # DynamoDB 保存失敗時のエラーログ
+      # Cognito には既に登録されているため、ロールバックはできない
+      Rails.logger.error "Failed to save user to DynamoDB: #{e.message}"
+      Rails.logger.error "User was created in Cognito: user_sub=#{user_sub}, email=#{email}"
+      # エラーは記録するが、SignUpは成功として扱う
+    end
+
     {
       success: true,
-      user_sub: response.user_sub,
+      user_sub: user_sub,
       user_confirmed: response.user_confirmed,
       code_delivery_details: response.code_delivery_details&.to_h
     }
@@ -81,11 +111,29 @@ class CognitoService
   # @param confirmation_code [String] 確認コード
   # @return [Hash] レスポンス
   def confirm_sign_up(username:, confirmation_code:)
+    # Cognito で確認コードを検証
     @client.confirm_sign_up({
       client_id: @client_id,
       username: username,
       confirmation_code: confirmation_code
     })
+
+    # DynamoDB のユーザーステータスを active に更新
+    begin
+      # メールアドレスからuser_subを取得するため、Cognitoに問い合わせ
+      user = get_user_by_username(username)
+      if user
+        @user_repository.update_status(
+          user_id: user['user_sub'],
+          status: 'active'
+        )
+        Rails.logger.info "User status updated to active: #{user['user_sub']}"
+      end
+    rescue StandardError => e
+      # ステータス更新失敗時のエラーログ
+      Rails.logger.error "Failed to update user status in DynamoDB: #{e.message}"
+      # 確認自体は成功しているので、エラーは記録するのみ
+    end
 
     {
       success: true,
@@ -175,6 +223,28 @@ class CognitoService
   end
 
   private
+
+  # ユーザー名（メールアドレス）からユーザー情報を取得
+  # @param username [String] ユーザー名（メールアドレス）
+  # @return [Hash, nil] ユーザー情報
+  def get_user_by_username(username)
+    response = @client.admin_get_user({
+      user_pool_id: @user_pool_id,
+      username: username
+    })
+
+    {
+      'user_sub' => response.user_attributes.find { |attr| attr.name == 'sub' }&.value,
+      'email' => response.user_attributes.find { |attr| attr.name == 'email' }&.value,
+      'email_verified' => response.user_attributes.find { |attr| attr.name == 'email_verified' }&.value,
+      'status' => response.user_status
+    }
+  rescue Aws::CognitoIdentityProvider::Errors::UserNotFoundException
+    nil
+  rescue Aws::CognitoIdentityProvider::Errors::ServiceError => e
+    Rails.logger.error "Failed to get user from Cognito: #{e.message}"
+    nil
+  end
 
   # メールアドレスの簡易バリデーション
   def validate_email!(email)
