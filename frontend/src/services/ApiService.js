@@ -53,14 +53,16 @@ async function apiRequest(endpoint, options = {}) {
 class ApiService {
   /**
    * ユーザー登録
+   * @param {string} name - ユーザー名
    * @param {string} email - メールアドレス
    * @param {string} password - パスワード
    * @returns {Promise<object>}
    */
-  static async signUp(email, password) {
+  static async signUp(name, email, password) {
     return apiRequest('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
+        name,
         email,
         password
       })

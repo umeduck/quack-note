@@ -38,6 +38,18 @@
 
             <!-- サインアップフォーム -->
             <v-form v-if="!showConfirmation" ref="signupForm" @submit.prevent="handleSignUp">
+              <!-- 名前 -->
+              <v-text-field
+                v-model="name"
+                label="名前"
+                type="text"
+                prepend-inner-icon="mdi-account"
+                :rules="nameRules"
+                variant="outlined"
+                required
+                class="mb-2"
+              ></v-text-field>
+
               <!-- メールアドレス -->
               <v-text-field
                 v-model="email"
@@ -169,6 +181,7 @@ import CognitoService from '../services/CognitoService'
 const router = useRouter()
 
 // フォームデータ
+const name = ref('')
 const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
@@ -183,6 +196,12 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 // バリデーションルール
+
+const nameRules = [
+  v => !!v || '名前を入力してください',
+  v => (v && v.length <= 50) || '名前は50文字以内で入力してください'
+]
+
 const emailRules = [
   v => !!v || 'メールアドレスを入力してください',
   v => /.+@.+\..+/.test(v) || '有効なメールアドレスを入力してください'
@@ -213,6 +232,7 @@ const handleSignUp = async () => {
 
   try {
     const result = await CognitoService.signUp(
+      name.value,
       email.value,
       password.value
     )

@@ -25,9 +25,9 @@ class CognitoService {
    * @param {string} password - パスワード
    * @returns {Promise<{success: boolean, user_sub?: string, error?: string}>}
    */
-  async signUp(email, password) {
+  async signUp(name, email, password) {
     try {
-      const result = await ApiService.signUp(email, password)
+      const result = await ApiService.signUp(name, email, password)
 
       return {
         success: true,

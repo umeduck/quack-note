@@ -8,19 +8,21 @@ module Api
     # @param email [String] メールアドレス
     # @param password [String] パスワード
     def signup
+      name = params[:name]
       email = params[:email]
       password = params[:password]
 
-      if email.blank? || password.blank?
+      if name.blank? || email.blank? || password.blank?
         render json: {
           success: false,
           error_code: 'MissingParameters',
-          error_message: 'メールアドレスとパスワードは必須です'
+          error_message: '名前とメールアドレスとパスワードは必須です'
         }, status: :bad_request
         return
       end
 
       result = @cognito_service.sign_up(
+        name: name,
         email: email,
         password: password
       )

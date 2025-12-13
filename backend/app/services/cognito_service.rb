@@ -17,7 +17,8 @@ class CognitoService
   # @param email [String] メールアドレス（usernameとして使用）
   # @param password [String] パスワード
   # @return [Hash] レスポンス
-  def sign_up(email:, password:)
+  def sign_up(name:, email:, password:)
+    validate_name!(name)
     validate_email!(email)
     validate_password!(password)
 
@@ -45,8 +46,8 @@ class CognitoService
         user_id: user_sub,
         workspace_id: nil,
         email: email,
-        name: 'test',
-        role: 'master',
+        name: name,
+        role: 'member',
         status: 'pending',
         created_at: Time.now.zone,
         updated_at: Time.now.zone
@@ -244,6 +245,11 @@ class CognitoService
   rescue Aws::CognitoIdentityProvider::Errors::ServiceError => e
     Rails.logger.error "Failed to get user from Cognito: #{e.message}"
     nil
+  end
+
+  def validate_name!(name)
+    raise ArgumentError, 'Name is required' if name.blank?
+    raise ArgumentError, 'Name must be at most 50 characters' if name.length > 50
   end
 
   # メールアドレスの簡易バリデーション

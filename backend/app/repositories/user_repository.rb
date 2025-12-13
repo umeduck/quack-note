@@ -16,21 +16,20 @@ class UserRepository
   # @param created_at [Time] 作成日時
   # @param updated_at [Time] 更新日時
   # @return [Hash] 作成されたユーザー情報
-  def create(user_id:, workspace_id:, email:, name: 'test', role: 'member', status: 'pending', created_at: nil, updated_at: nil)
+  def create(user_id:, workspace_id:, email:, name:, role:, status: 'pending', created_at: nil, updated_at: nil)
     now = Time.now.getlocal('+09:00').iso8601
 
     item = {
-      'user_id' => user_id,
-      'workspace_id' => '1',
-      'email' => email,
-      'name' => name,
-      'role' => role,
-      'status' => status,
-      'created_at' => now,
-      'updated_at' => now
-    }
+      'user_id'      => user_id,
+      'workspace_id' => workspace_id, # nil の可能性あり
+      'email'        => email,
+      'name'         => name,
+      'role'         => role,
+      'status'       => status,
+      'created_at'   => now,
+      'updated_at'   => now
+    }.compact
 
-    Rails.logger.info "item to put: #{item.inspect}"
 
     @client.put_item(
       table_name: @table_name,
