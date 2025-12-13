@@ -16,6 +16,11 @@ services:
       RAILS_ENV: development
       AWS_REGION: ap-northeast-1
       DYNAMODB_USERS_TABLE: dev_quacknote_users
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_EC2_METADATA_DISABLED: "true"
+      COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID}
     stdin_open: true
     tty: true
 

@@ -19,7 +19,7 @@
               class="mb-6"
             >
               <div class="text-body-2">
-                Cognito Hosted UI を使用してログインまたは新規登録してください
+                Cognito Hosted UI を使用してログインしてください
               </div>
             </v-alert>
 
@@ -34,18 +34,25 @@
               Sign In
             </v-btn>
 
-            <v-btn
-              color="secondary"
-              block
-              size="x-large"
-              variant="outlined"
-              prepend-icon="mdi-account-plus"
-              @click="handleCreateAccount"
-            >
-              Create Account
-            </v-btn>
+            <v-divider class="my-6"></v-divider>
 
-            <v-divider class="my-8"></v-divider>
+            <div class="text-center mb-6">
+              <p class="text-body-2 text-medium-emphasis mb-2">
+                アカウントをお持ちでない方
+              </p>
+              <v-btn
+                color="secondary"
+                block
+                size="large"
+                variant="outlined"
+                prepend-icon="mdi-account-plus"
+                @click="$router.push('/signup')"
+              >
+                新規登録はこちら
+              </v-btn>
+            </div>
+
+            <v-divider class="my-6"></v-divider>
 
             <div class="text-center">
               <p class="text-body-2 text-medium-emphasis mb-2">
@@ -101,15 +108,6 @@ import AuthService from '../services/AuthService'
 const handleSignIn = () => {
   const loginUrl = AuthService.getLoginUrl()
   window.location.href = loginUrl
-}
-
-/**
- * Create Account ボタンのクリックハンドラ
- * Cognito Hosted UI のサインアップページへ遷移
- */
-const handleCreateAccount = () => {
-  const signupUrl = AuthService.getSignupUrl()
-  window.location.href = signupUrl
 }
 </script>
 

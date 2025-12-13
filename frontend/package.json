@@ -14,7 +14,8 @@
     "vuetify": "^3.5.10",
     "pinia": "^2.1.7",
     "@mdi/font": "^7.4.47",
-    "axios": "^1.6.7"
+    "axios": "^1.6.7",
+    "amazon-cognito-identity-js": "^6.3.7"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

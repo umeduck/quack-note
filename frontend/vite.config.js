@@ -8,6 +8,10 @@ export default defineConfig({
     vue(),
     vuetify({ autoImport: true })
   ],
+  define: {
+    // amazon-cognito-identity-js のために global を定義
+    'global': 'globalThis',
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

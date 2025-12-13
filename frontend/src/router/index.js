@@ -3,6 +3,7 @@ import AuthService from '../services/AuthService'
 import HomeView from '../views/HomeView.vue'
 import RecordView from '../views/RecordView.vue'
 import LoginView from '../views/LoginView.vue'
+import SignUpView from '../views/SignUpView.vue'
 import AuthCallback from '../views/AuthCallback.vue'
 
 const router = createRouter({
@@ -12,6 +13,12 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+      meta: { requiresGuest: true }
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: SignUpView,
       meta: { requiresGuest: true }
     },
     {

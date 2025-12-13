@@ -4,8 +4,8 @@ set -e
 echo "Starting QuackNote backend..."
 
 # Bundle install (volume mount後に実行)
-echo "Installing gems..."
-bundle install
+# echo "Installing gems..."
+# bundle install
 
 # bin/rails に実行権限を付与
 if [ -f /app/bin/rails ]; then
