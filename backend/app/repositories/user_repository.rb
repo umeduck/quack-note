@@ -25,6 +25,7 @@ class UserRepository
       'email'        => email,
       'name'         => name,
       'role'         => role,
+      'verification_attempts' => 0,
       'status'       => status,
       'created_at'   => now,
       'updated_at'   => now
@@ -98,7 +99,7 @@ class UserRepository
   # @param status [String] 新しいステータス
   # @return [Hash] 更新されたユーザー情報
   def update_status(user_id:, status:)
-    now = Time.current.zone
+    now = Time.current.iso8601
 
     response = @client.update_item(
       table_name: @table_name,
@@ -120,6 +121,61 @@ class UserRepository
     normalize_item(response.attributes)
   rescue Aws::DynamoDB::Errors::ServiceError => e
     Rails.logger.error "DynamoDB update_item error: #{e.message}"
+    raise
+  end
+
+  # 確認コード入力の失敗回数をインクリメント
+  # @param user_id [String] ユーザーID (Cognito sub)
+  # @return [Hash] 更新されたユーザー情報（verification_attempts を含む）
+  def increment_verification_attempts(user_id:)
+    now = Time.current.iso8601
+
+    response = @client.update_item(
+      table_name: @table_name,
+      key: {
+        'user_id' => user_id
+      },
+      update_expression: 'ADD verification_attempts :inc SET updated_at = :now',
+      expression_attribute_values: {
+        ':inc' => 1,
+        ':now' => now
+      },
+      return_values: 'ALL_NEW'
+    )
+
+    user = normalize_item(response.attributes)
+    attempts = user['verification_attempts'] || 0
+
+    Rails.logger.info "Verification attempts incremented: user_id=#{user_id}, attempts=#{attempts}"
+    user
+  rescue Aws::DynamoDB::Errors::ServiceError => e
+    Rails.logger.error "DynamoDB increment verification attempts error: #{e.message}"
+    raise
+  end
+
+  # 確認コード入力の失敗回数をリセット
+  # @param user_id [String] ユーザーID (Cognito sub)
+  # @return [Hash] 更新されたユーザー情報
+  def reset_verification_attempts(user_id:)
+    now = Time.current.iso8601
+
+    response = @client.update_item(
+      table_name: @table_name,
+      key: {
+        'user_id' => user_id
+      },
+      update_expression: 'SET verification_attempts = :zero, updated_at = :now',
+      expression_attribute_values: {
+        ':zero' => 0,
+        ':now' => now
+      },
+      return_values: 'ALL_NEW'
+    )
+
+    Rails.logger.info "Verification attempts reset: user_id=#{user_id}"
+    normalize_item(response.attributes)
+  rescue Aws::DynamoDB::Errors::ServiceError => e
+    Rails.logger.error "DynamoDB reset verification attempts error: #{e.message}"
     raise
   end
 
@@ -198,8 +254,12 @@ class UserRepository
 
     {
       'user_id' => item['user_id'],
+      'workspace_id' => item['workspace_id'],
       'email' => item['email'],
+      'name' => item['name'],
+      'role' => item['role'],
       'status' => item['status'],
+      'verification_attempts' => item['verification_attempts'] || 0,
       'created_at' => item['created_at'],
       'updated_at' => item['updated_at'],
       # 設定情報（既存のUserSettingsと共存）

@@ -3,6 +3,7 @@ require 'aws-sdk-cognitoidentityprovider'
 # Cognito User Pool を操作するサービスクラス
 # AWS SDK v3 を使用して SignUp, ConfirmSignUp, ResendConfirmationCode を実行
 class CognitoService
+  MAX_VERIFICATION_ATTEMPTS = 5
   # Cognito クライアントの初期化
   def initialize(user_repository: nil)
     @client = Aws::CognitoIdentityProvider::Client.new(
@@ -112,55 +113,114 @@ class CognitoService
   # @param confirmation_code [String] 確認コード
   # @return [Hash] レスポンス
   def confirm_sign_up(username:, confirmation_code:)
-    # Cognito で確認コードを検証
-    @client.confirm_sign_up({
-      client_id: @client_id,
-      username: username,
-      confirmation_code: confirmation_code
-    })
+    user = nil
 
-    # DynamoDB のユーザーステータスを active に更新
     begin
-      # メールアドレスからuser_subを取得するため、Cognitoに問い合わせ
+      # Cognito で確認コードを検証
+      @client.confirm_sign_up({
+        client_id: @client_id,
+        username: username,
+        confirmation_code: confirmation_code
+      })
+
+      # 成功: DynamoDB のユーザーステータスを active に更新 & 失敗回数をリセット
       user = get_user_by_username(username)
       if user
         @user_repository.update_status(
           user_id: user['user_sub'],
           status: 'active'
         )
-        Rails.logger.info "User status updated to active: #{user['user_sub']}"
+        @user_repository.reset_verification_attempts(user_id: user['user_sub'])
+        Rails.logger.info "User status updated to active and verification attempts reset: #{user['user_sub']}"
+      else
+        Rails.logger.warn "User not found in Cognito after successful confirmation: #{username}"
       end
-    rescue StandardError => e
-      # ステータス更新失敗時のエラーログ
-      Rails.logger.error "Failed to update user status in DynamoDB: #{e.message}"
-      # 確認自体は成功しているので、エラーは記録するのみ
-    end
 
-    {
-      success: true,
-      message: 'アカウントの確認が完了しました'
-    }
-  rescue Aws::CognitoIdentityProvider::Errors::CodeMismatchException => e
-    Rails.logger.error "Code mismatch: #{e.message}"
-    {
-      success: false,
-      error_code: 'CodeMismatchException',
-      error_message: '確認コードが正しくありません'
-    }
-  rescue Aws::CognitoIdentityProvider::Errors::ExpiredCodeException => e
-    Rails.logger.error "Code expired: #{e.message}"
-    {
-      success: false,
-      error_code: 'ExpiredCodeException',
-      error_message: '確認コードの有効期限が切れています'
-    }
-  rescue Aws::CognitoIdentityProvider::Errors::NotAuthorizedException => e
-    Rails.logger.error "Not authorized: #{e.message}"
-    {
-      success: false,
-      error_code: 'NotAuthorizedException',
-      error_message: 'ユーザーは既に確認済みです'
-    }
+      {
+        success: true,
+        message: 'アカウントの確認が完了しました'
+      }
+
+    rescue Aws::CognitoIdentityProvider::Errors::CodeMismatchException => e
+      Rails.logger.error "Code mismatch for user: #{username} - #{e.message}"
+
+      # 失敗回数をカウント
+      user = get_user_by_username(username)
+      if user
+        begin
+          updated_user = @user_repository.increment_verification_attempts(user_id: user['user_sub'])
+          attempts = updated_user['verification_attempts'] || 0
+
+          Rails.logger.warn "Verification attempt failed: user_id=#{user['user_sub']}, attempts=#{attempts}/#{MAX_VERIFICATION_ATTEMPTS}"
+
+          # 5回以上失敗したらアカウントをロック
+          if attempts >= MAX_VERIFICATION_ATTEMPTS
+            @user_repository.update_status(user_id: user['user_sub'], status: 'locked')
+            Rails.logger.error "Account locked due to too many verification attempts: user_id=#{user['user_sub']}"
+
+            return {
+              success: false,
+              error_code: 'TooManyAttempts',
+              error_message: '確認コードの入力失敗回数が上限（5回）に達しました。アカウントがロックされました。サポートにお問い合わせください。'
+            }
+          end
+        rescue StandardError => repo_error
+          Rails.logger.error "Failed to increment verification attempts: #{repo_error.message}"
+        end
+      end
+
+      {
+        success: false,
+        error_code: 'CodeMismatchException',
+        error_message: '確認コードが正しくありません'
+      }
+
+    rescue Aws::CognitoIdentityProvider::Errors::ExpiredCodeException => e
+      Rails.logger.error "Code expired for user: #{username} - #{e.message}"
+
+      # コード期限切れ: ステータスを verification_expired に更新（任意）
+      begin
+        user = get_user_by_username(username)
+        if user
+          @user_repository.update_status(
+            user_id: user['user_sub'],
+            status: 'verification_expired'
+          )
+          Rails.logger.info "User status updated to verification_expired: #{user['user_sub']}"
+        end
+      rescue StandardError => update_error
+        Rails.logger.error "Failed to update status to verification_expired: #{update_error.message}"
+      end
+
+      {
+        success: false,
+        error_code: 'ExpiredCodeException',
+        error_message: '確認コードの有効期限が切れています'
+      }
+
+    rescue Aws::CognitoIdentityProvider::Errors::NotAuthorizedException => e
+      Rails.logger.error "Not authorized: #{e.message}"
+
+      # 既に確認済み: ステータスを active に更新
+      begin
+        user = get_user_by_username(username)
+        if user
+          @user_repository.update_status(
+            user_id: user['user_sub'],
+            status: 'active'
+          )
+          Rails.logger.info "User already confirmed, status updated to active: #{user['user_sub']}"
+        end
+      rescue StandardError => update_error
+        Rails.logger.error "Failed to update status for already confirmed user: #{update_error.message}"
+      end
+
+      {
+        success: false,
+        error_code: 'NotAuthorizedException',
+        error_message: 'ユーザーは既に確認済みです'
+      }
+    end
   rescue Aws::CognitoIdentityProvider::Errors::ServiceError => e
     Rails.logger.error "Cognito service error: #{e.message}"
     {
