@@ -9,13 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "amazon-cognito-identity-js": "^6.3.7",
+    "axios": "^1.6.7",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.3",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",
-    "vuetify": "^3.5.10",
-    "pinia": "^2.1.7",
-    "@mdi/font": "^7.4.47",
-    "axios": "^1.6.7",
-    "amazon-cognito-identity-js": "^6.3.7"
+    "vuetify": "^3.5.10"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

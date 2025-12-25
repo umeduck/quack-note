@@ -3,6 +3,12 @@ set -e
 
 echo "Starting QuackNote backend..."
 
+# server.pid が存在する場合のみ削除
+if [ -f tmp/pids/server.pid ]; then
+  rm tmp/pids/server.pid
+  echo "Removed stale server.pid"
+fi
+
 # Bundle install (volume mount後に実行)
 # echo "Installing gems..."
 # bundle install

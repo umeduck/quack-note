@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import AuthService from '../services/AuthService'
+import { useAuthStore } from '../stores/auth'
 import HomeView from '../views/HomeView.vue'
 import RecordView from '../views/RecordView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -44,7 +44,8 @@ const router = createRouter({
 
 // 認証ガード
 router.beforeEach((to, from, next) => {
-  const isLoggedIn = AuthService.isLoggedIn()
+  const authStore = useAuthStore()
+  const isLoggedIn = authStore.isLoggedIn()
 
   // 公開ページ（認証不要）
   if (to.meta.public) {

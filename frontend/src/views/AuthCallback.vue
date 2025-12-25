@@ -126,20 +126,11 @@ const handleCallback = async () => {
       throw new Error(result.error?.error_description || 'トークンの取得に失敗しました')
     }
 
-    console.log('トークン取得成功:', result.data)
-
-    // トークンを保存
-    AuthService.saveTokens(result.data)
+    // トークンを保存（Pinia ストア経由で保存される）
+    authStore.saveTokens(result.data)
 
     // axios のヘッダーにトークンを設定
-    AuthService.setAuthorizationHeader()
-
-    // ユーザー情報を取得して Pinia ストアに保存
-    const userInfo = AuthService.getUserInfo()
-    if (userInfo) {
-      authStore.setUser(userInfo)
-      authStore.setToken(result.data.access_token)
-    }
+    authStore.setAuthorizationHeader()
 
     loading.value = false
     success.value = true
