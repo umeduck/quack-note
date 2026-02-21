@@ -3,7 +3,9 @@
     "allow": [
       "Bash(curl:*)"
     ],
-    "deny": [],
+    "deny": [
+        "Read(.env*)"
+      ],
     "ask": []
   }
 }
